@@ -1,2 +1,5 @@
 /TagCloudGenerator$StringCaseInsensitiveComparator.class
 /TagCloudGenerator.class
+/TagCloudGenerator$PairComparator.class
+/TagCloudGenerator$CountComparator.class
+/TagCloudGenerator$WordComparator.class
