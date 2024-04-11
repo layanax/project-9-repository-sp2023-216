@@ -9,6 +9,9 @@ import components.simplereader.SimpleReader1L;
 import components.simplewriter.SimpleWriter;
 import components.simplewriter.SimpleWriter1L;
 
+///THINGS WE NEED TO FIX
+// - need to format tag cloud to in div tags
+
 /**
  * TagCloudGenerator generates an HTML file displaying a tag cloud from an input
  * text file.
@@ -32,18 +35,18 @@ public final class TagCloudGenerator {
      * @ensures <pre> out.is.open and output.content = #out.content *
      * [tag cloud headers] </pre>
      */
-    private static void indexHeaders(SimpleWriter out) {
+    private static void indexHeaders(SimpleWriter out, String inName, int N) {
         out.println("<!DOCTYPE html>");
         out.println("<html>");
         out.println("<head>");
         out.println("\t<title>Tag Cloud</title>");
         out.println(
-                "\t<link href=\"tagcloud.css\" type=\"text/css\" rel=\"stylesheet\">");
+                "\t<link href=\"http://web.cse.ohio-state.edu/software/2231/web-sw2/assignments/projects/tag-cloud-generator/data/tagcloud.css\" rel = \"stylesheet\" type = \"text/css\">");
         out.println(
                 "\t<link href=\"tagcloud.css\" type=\"text/css\" rel=\"stylesheet\">");
         out.println("</head>");
         out.println("<body>");
-        out.println("\t<h2>Tag Cloud</h2>");
+        out.println("\t<h2>Top " + N + " words in " + inName + " </h2>");
         out.println("\t<hr>");
         out.println();
     }
@@ -87,11 +90,14 @@ public final class TagCloudGenerator {
      * @ensures <pre> out.content = #out.content * [print out words in tag cloud
      * format] </pre>
      */
-    private static void tagCloud(Map<String, Integer> map, SimpleWriter out) {
+    private static void tagCloud(Map<String, Integer> map, SimpleWriter out,
+            int N) {
         out.println("<div class=\"tagcloud\">");
+        out.println("<p class = \"cbox\">");
 
         //sorted queue of map pairs based on counts
-        Queue<Map.Pair<String, Integer>> sortedWords = createSortedQueue(map);
+        Queue<Map.Pair<String, Integer>> sortedWords = createSortedQueue(map,
+                N);
 
         //calculate font sizes for tag cloud
         int maxCount = map.value(map.iterator().next().key());
@@ -108,13 +114,14 @@ public final class TagCloudGenerator {
             int count = entry.value();
 
             //calculates font size based on count
-            double fontSize = calculateFontSize(count, minCount, maxCount);
+            int fontSize = calculateFontSize(count, minCount, maxCount);
 
             //outputs word with correct font size
-            out.println("<span style=\"font-size: " + fontSize + "px\">" + word
+            out.println("<span style=\"cursor:default\" class = \" f" + fontSize
+                    + "\" title = \"count: " + entry.value() + "\">" + word
                     + "</span>");
         }
-
+        out.println("</p>");
         out.println("</div>");
     }
 
@@ -129,14 +136,17 @@ public final class TagCloudGenerator {
      *            the maximum count among all words
      * @return the font size for the word
      */
-    private static double calculateFontSize(int count, int minCount,
+    private static int calculateFontSize(int count, int minCount,
             int maxCount) {
 
         final int minFontSize = 11;
         final int maxFontSize = 48;
         double relativeSize = ((double) count - minCount)
                 / (maxCount - minCount);
-        return minFontSize + relativeSize * (maxFontSize - minFontSize);
+        int font = (int) Math.ceil(
+                relativeSize + relativeSize * (maxFontSize - minFontSize));
+
+        return font;
     }
 
     /**
@@ -148,7 +158,7 @@ public final class TagCloudGenerator {
      * @return a queue of words sorted into alphabetical order
      */
     private static Queue<Map.Pair<String, Integer>> createSortedQueue(
-            Map<String, Integer> map) {
+            Map<String, Integer> map, int N) {
         Queue<Map.Pair<String, Integer>> queue = new Queue1L<>();
 
         for (Map.Pair<String, Integer> entry : map) {
@@ -158,9 +168,15 @@ public final class TagCloudGenerator {
         Comparator<Map.Pair<String, Integer>> countComparator = new CountComparator();
         Comparator<Map.Pair<String, Integer>> wordComparator = new WordComparator();
         queue.sort(countComparator);
-        queue.sort(wordComparator);
 
-        return queue;
+        Queue<Map.Pair<String, Integer>> queue2 = queue.newInstance();
+        for (int i = 0; i < N; i++) {
+            queue2.enqueue(queue.dequeue());
+        }
+
+        queue2.sort(wordComparator);
+
+        return queue2;
     }
 
     /**
@@ -209,12 +225,15 @@ public final class TagCloudGenerator {
         String outputFile = in.nextLine();
         SimpleWriter output = new SimpleWriter1L(outputFile);
 
+        out.println("Enter number of words to include in Tag Cloud");
+        int N = in.nextInteger();
+
         //generates HTML headers for output file
-        indexHeaders(output);
+        indexHeaders(output, inputFile, N);
 
         //process input file, count words, and generate tag cloud
         Map<String, Integer> map = repeatedWords(input);
-        tagCloud(map, output);
+        tagCloud(map, output, N);
 
         in.close();
         out.close();
