@@ -440,6 +440,7 @@ public final class TagCloudGenerator {
         out.print("Enter the name of an input file: ");
         String inputFile = in.nextLine();
         SimpleReader input = new SimpleReader1L(inputFile);
+        Reporter.assertElseFatalError(input.isOpen(), "invalid input file");
 
         out.print("Enter the name of the output HTML file: ");
         String outputFile = in.nextLine();
