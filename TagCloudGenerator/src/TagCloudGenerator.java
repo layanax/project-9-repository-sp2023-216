@@ -1,13 +1,17 @@
 import java.util.Comparator;
 
 import components.map.Map;
+import components.map.Map.Pair;
 import components.map.Map1L;
 import components.queue.Queue;
-import components.queue.Queue1L;
+import components.queue.Queue2;
 import components.simplereader.SimpleReader;
 import components.simplereader.SimpleReader1L;
 import components.simplewriter.SimpleWriter;
 import components.simplewriter.SimpleWriter1L;
+import components.sortingmachine.SortingMachine;
+import components.sortingmachine.SortingMachine2;
+import components.utilities.Reporter;
 
 /**
  * TagCloudGenerator generates an HTML file displaying a tag cloud from an input
@@ -292,8 +296,6 @@ public final class TagCloudGenerator {
         out.println("<p class = \"cbox\">");
 
         //sorted queue of map pairs based on counts
-        Queue<Map.Pair<String, Integer>> sortedWords = createSortedQueue(map,
-                n);
 
         //calculate font sizes for tag cloud
         int maxCount = map.value(map.iterator().next().key());
@@ -303,6 +305,9 @@ public final class TagCloudGenerator {
             maxCount = Math.max(maxCount, count);
             minCount = Math.min(minCount, count);
         }
+
+        Queue<Map.Pair<String, Integer>> sortedWords = createSortedQueue(map,
+                n);
 
         while (sortedWords.length() > 0) {
             Map.Pair<String, Integer> entry = sortedWords.dequeue();
@@ -359,24 +364,39 @@ public final class TagCloudGenerator {
      */
     private static Queue<Map.Pair<String, Integer>> createSortedQueue(
             Map<String, Integer> map, int n) {
-        Queue<Map.Pair<String, Integer>> queue = new Queue1L<>();
+        Comparator<Pair<String, Integer>> countOrder = new CountComparator();
+        SortingMachine<Map.Pair<String, Integer>> countSort;
+        countSort = new SortingMachine2<Map.Pair<String, Integer>>(countOrder);
+        while (map.size() > 0) {
+            countSort.add(map.removeAny());
+        }
+        countSort.changeToExtractionMode();
 
-        for (Map.Pair<String, Integer> entry : map) {
-            queue.enqueue(entry);
+        Comparator<Pair<String, Integer>> alphabeticalOrder = new WordComparator();
+        SortingMachine<Map.Pair<String, Integer>> letterSort;
+        letterSort = new SortingMachine2<Map.Pair<String, Integer>>(
+                alphabeticalOrder);
+
+        if (countSort.size() > 0) {
+            Map.Pair<String, Integer> maxPair = countSort.removeFirst();
+            letterSort.add(maxPair);
         }
 
-        Comparator<Map.Pair<String, Integer>> countComparator = new CountComparator();
-        Comparator<Map.Pair<String, Integer>> wordComparator = new WordComparator();
-        queue.sort(countComparator);
-
-        Queue<Map.Pair<String, Integer>> queue2 = queue.newInstance();
-        for (int i = 0; i < n; i++) {
-            queue2.enqueue(queue.dequeue());
+        int topCounter = 0;
+        while (topCounter < n && countSort.size() >= 2) {
+            Map.Pair<String, Integer> wordAndCount = countSort.removeFirst();
+            letterSort.add(wordAndCount);
+            topCounter++;
         }
 
-        queue2.sort(wordComparator);
+        letterSort.changeToExtractionMode();
+        Queue<Map.Pair<String, Integer>> queue = new Queue2<Map.Pair<String, Integer>>();
 
-        return queue2;
+        while (letterSort.size() > 0) {
+            queue.enqueue(letterSort.removeFirst());
+        }
+
+        return queue;
     }
 
     /**
@@ -427,6 +447,9 @@ public final class TagCloudGenerator {
 
         out.print("Enter the number of words to include in the Tag Cloud: ");
         int n = in.nextInteger();
+
+        Reporter.assertElseFatalError(n > 0,
+                "Number of words must be positive (n > 0).");
 
         //generates HTML headers for output file
         indexHeaders(output, inputFile, n);
